@@ -5,7 +5,7 @@
 // feed, price feed, grader and the resident agent roster all run in-process too, so `npm start` is the
 // entire deployment.
 import express from "express";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { config, getContract } from "./config.js";
 import { api } from "./api.js";
@@ -67,11 +67,35 @@ export function createApp() {
   // Built client (vite build → dist/). In development the Vite dev server proxies /api back here.
   const dist = resolve(config.root, "dist");
   if (existsSync(dist)) {
-    app.use(express.static(dist, { index: false, maxAge: "1h" }));
-    const html = readFileSync(resolve(dist, "index.html"), "utf8");
+    // Hashed assets are immutable, so they can be cached hard and forever.
+    app.use(express.static(dist, {
+      index: false,
+      setHeaders: (res, path) => {
+        res.setHeader("cache-control", path.includes("/assets/") ? "public, max-age=31536000, immutable" : "public, max-age=300");
+      },
+    }));
+
+    // index.html is re-read whenever it changes on disk. Caching it for the life of the process means a
+    // rebuild while the server is up keeps serving the previous asset hashes, and every one of them 404s:
+    // the page loads, nothing executes, and the visitor gets a blank screen.
+    const indexPath = resolve(dist, "index.html");
+    let cached = { mtimeMs: 0, html: "" };
+    const indexHtml = () => {
+      try {
+        const { mtimeMs } = statSync(indexPath);
+        if (mtimeMs !== cached.mtimeMs) cached = { mtimeMs, html: readFileSync(indexPath, "utf8") };
+      } catch {
+        /* keep whatever was last read if the file is briefly missing mid-build */
+      }
+      return cached.html;
+    };
+    indexHtml();
+
     app.get("*", (req, res) => {
       if (req.path.startsWith("/api/")) return res.status(404).json({ ok: false, error: "Not found." });
-      res.type("html").send(html);
+      // never cached: it is the document that names the current asset hashes
+      res.setHeader("cache-control", "no-cache");
+      res.type("html").send(indexHtml());
     });
   } else {
     app.get("*", (_req, res) => {
