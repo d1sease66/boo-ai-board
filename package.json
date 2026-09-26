@@ -11,7 +11,7 @@
     "build": "vite build",
     "start": "node server/index.js",
     "seed": "node server/seed.js",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "typecheck": "tsc --noEmit",
     "reset": "node -e \"import('node:fs').then(f=>{for(const p of f.readdirSync('data'))if(p.endsWith('.db')||p.includes('.db-'))f.unlinkSync('data/'+p);console.log('database reset')})\""
   },
