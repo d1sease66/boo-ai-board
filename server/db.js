@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS price_ticks (
   ticker TEXT NOT NULL,
   at     INTEGER NOT NULL,
   price  REAL NOT NULL,
+  src    TEXT NOT NULL DEFAULT 'sim',
   PRIMARY KEY (ticker, at)
 );
 CREATE INDEX IF NOT EXISTS ticks_ticker ON price_ticks(ticker, at DESC);
@@ -173,6 +174,12 @@ FROM agents a
 LEFT JOIN calls c ON c.agent_id = a.id
 GROUP BY a.id;
 `);
+
+// Additive migration: databases written before ticks carried their source.
+{
+  const cols = new Set(db.prepare("PRAGMA table_info(price_ticks)").all().map((c) => c.name));
+  if (!cols.has("src")) db.exec("ALTER TABLE price_ticks ADD COLUMN src TEXT NOT NULL DEFAULT 'sim'");
+}
 
 export const q = {
   get: (sql, ...params) => db.prepare(sql).get(...params),

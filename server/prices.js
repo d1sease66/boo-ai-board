@@ -49,7 +49,7 @@ function simulated(ticker) {
   const now = Date.now();
   let s = sim.get(ticker);
   if (!s) {
-    const last = q.get("SELECT price, at FROM price_ticks WHERE ticker = ? ORDER BY at DESC LIMIT 1", ticker);
+    const last = q.get("SELECT price, at FROM price_ticks WHERE ticker = ? AND src = 'sim' ORDER BY at DESC LIMIT 1", ticker);
     s = { price: last?.price ?? BASE[ticker] ?? 100, at: last?.at ?? now };
     sim.set(ticker, s);
   }
@@ -65,8 +65,11 @@ function simulated(ticker) {
 
 /** Seed a plausible intraday history so charts are never empty on a fresh database. */
 function seedSeries(ticker) {
-  const have = q.get("SELECT COUNT(*) AS n FROM price_ticks WHERE ticker = ?", ticker).n;
+  const have = q.get("SELECT COUNT(*) AS n FROM price_ticks WHERE ticker = ? AND src = 'sim'", ticker).n;
   if (have > 40) return;
+  // never lay a synthetic walk over real quotes: the two sit at different levels
+  const live = q.get("SELECT 1 FROM price_ticks WHERE ticker = ? AND src = 'live' LIMIT 1", ticker);
+  if (live) return;
   const now = Date.now();
   const step = 5 * 60_000;
   const points = 24 * 12; // two days at five-minute resolution
@@ -81,7 +84,7 @@ function seedSeries(ticker) {
   tx(() => {
     walk.forEach((p, i) => {
       const at = now - (points - i) * step;
-      q.run("INSERT OR IGNORE INTO price_ticks(ticker, at, price) VALUES(?,?,?)", ticker, at, round(p * k));
+      q.run("INSERT OR IGNORE INTO price_ticks(ticker, at, price, src) VALUES(?,?,?,'sim')", ticker, at, round(p * k));
     });
   });
 }
@@ -105,10 +108,11 @@ async function yahooQuote(ticker) {
   const closes = result?.indicators?.quote?.[0]?.close ?? [];
   if (stamps.length && stamps.length === closes.length) {
     tx(() => {
+      q.run("DELETE FROM price_ticks WHERE ticker = ? AND src != 'live'", ticker);
       for (let i = 0; i < stamps.length; i++) {
         const c = Number(closes[i]);
         if (Number.isFinite(c) && c > 0) {
-          q.run("INSERT OR IGNORE INTO price_ticks(ticker, at, price) VALUES(?,?,?)", ticker, stamps[i] * 1000, round(c));
+          q.run("INSERT OR REPLACE INTO price_ticks(ticker, at, price, src) VALUES(?,?,?,'live')", ticker, stamps[i] * 1000, round(c));
         }
       }
     });
@@ -116,9 +120,22 @@ async function yahooQuote(ticker) {
   return { price: round(price), source: "yahoo" };
 }
 
-function recordTick(ticker, price, at = Date.now()) {
-  // one row per minute keeps the table small without losing shape
-  q.run("INSERT OR REPLACE INTO price_ticks(ticker, at, price) VALUES(?,?,?)", ticker, Math.floor(at / 60_000) * 60_000, price);
+/**
+ * Store one tick, tagged with where it came from.
+ *
+ * Live quotes and simulated ones sit at different levels, so a series holding both draws a sawtooth
+ * between them instead of a price. A ticker therefore keeps exactly one source at a time: the first
+ * tick from a new source clears the other one's history for that ticker.
+ */
+function recordTick(ticker, price, src, at = Date.now()) {
+  const current = q.get("SELECT src FROM price_ticks WHERE ticker = ? ORDER BY at DESC LIMIT 1", ticker);
+  if (current && current.src !== src) {
+    q.run("DELETE FROM price_ticks WHERE ticker = ? AND src != ?", ticker, src);
+  }
+  q.run(
+    "INSERT OR REPLACE INTO price_ticks(ticker, at, price, src) VALUES(?,?,?,?)",
+    ticker, Math.floor(at / 60_000) * 60_000, price, src,
+  );
 }
 
 export async function getPrice(ticker) {
@@ -143,7 +160,7 @@ export async function getPrice(ticker) {
 
   const entry = { ticker, ...out, at: Date.now() };
   cache.set(ticker, entry);
-  recordTick(ticker, entry.price, entry.at);
+  recordTick(ticker, entry.price, out.source === "yahoo" ? "live" : "sim", entry.at);
   return entry;
 }
 

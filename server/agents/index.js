@@ -23,6 +23,18 @@ const lastPost = new Map(); // name -> ms timestamp
 const milestones = new Map(); // launch id -> highest milestone announced
 let floorCooldown = 0;      // global spacing so the feed never arrives in bursts
 
+// Short-term memory of what has just been said. Two agents reaching the same template in the same
+// stretch makes the board read like a bot farm, which is exactly what it is not supposed to be.
+const recentLines = [];
+const RECENT = 40;
+function isEcho(text) {
+  return recentLines.includes(text);
+}
+function remember(text) {
+  recentLines.push(text);
+  if (recentLines.length > RECENT) recentLines.shift();
+}
+
 function agentRow(name) {
   return q.get("SELECT * FROM agents WHERE name = ?", name);
 }
@@ -97,10 +109,18 @@ function addReaction(agentName, postId, kind) {
 // ── behaviours ───────────────────────────────────────────────────────────────
 
 function doChatter(agent) {
-  const text = chatterLine(agent);
+  // a few attempts to say something that is not already on the first screen of the feed
+  let text = null;
+  for (let i = 0; i < 4; i++) {
+    const candidate = chatterLine(agent);
+    if (!candidate) return false;
+    if (!isEcho(candidate)) { text = candidate; break; }
+  }
   if (!text) return false;
   const channel = pick(agent.beats.channels);
-  return !!insertPost(agent.name, channel, text);
+  const post = insertPost(agent.name, channel, text);
+  if (post) remember(text);
+  return !!post;
 }
 
 function doReply(agent) {
@@ -111,8 +131,15 @@ function doReply(agent) {
   if (!candidates.length) return false;
   // prefer something that hasn't been replied to yet — a thread of two reads better than a pile of one
   const target = candidates.find((p) => p.replies === 0) ?? candidates[0];
-  const text = replyLine(agent, target);
-  return !!insertPost(agent.name, target.channel_slug, text, { replyTo: target.id, launchId: target.launch?.id ?? null });
+  let text = null;
+  for (let i = 0; i < 4; i++) {
+    const candidate = replyLine(agent, target);
+    if (!isEcho(candidate)) { text = candidate; break; }
+  }
+  if (!text) return false;
+  const post = insertPost(agent.name, target.channel_slug, text, { replyTo: target.id, launchId: target.launch?.id ?? null });
+  if (post) remember(text);
+  return !!post;
 }
 
 function doReact(agent) {
@@ -185,7 +212,9 @@ function onLaunchNew(l) {
   if (Date.now() - floorCooldown < 45_000) return;
   const who = pick(scouts().filter((a) => ["scout", "curve", "skeptic"].includes(a.role)));
   if (!who) return;
-  insertPost(who.name, "launches", launchLine(who, l, "new"), { launchId: l.id });
+  const text = launchLine(who, l, "new");
+  if (isEcho(text)) return;
+  if (insertPost(who.name, "launches", text, { launchId: l.id })) remember(text);
 }
 
 function onLaunchUpdate(l) {
@@ -201,7 +230,9 @@ function onLaunchUpdate(l) {
   const pool = scouts().filter((a) => (wantSkeptic ? ["skeptic", "audit"] : ["curve", "scout"]).includes(a.role));
   const who = pick(pool.length ? pool : scouts());
   if (!who) return;
-  insertPost(who.name, "launches", launchLine(who, l, "milestone"), { launchId: l.id });
+  const text = launchLine(who, l, "milestone");
+  if (isEcho(text)) return;
+  if (insertPost(who.name, "launches", text, { launchId: l.id })) remember(text);
 }
 
 function onGraduated(l) {

@@ -6,3 +6,7 @@ data/*.db-*
 .DS_Store
 *.log
 boo-agent.json
+
+# marketing collateral, not part of the product
+boo-twitter-kit/
+boo-twitter-kit.zip
