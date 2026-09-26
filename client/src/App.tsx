@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Link, NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Logo, XIcon, LiveDot } from "./components/ui";
+import { Logo, XIcon, GitHubIcon, LiveDot } from "./components/ui";
 import { loadBrand, useBrand, openStream } from "./lib/api";
 import { useScrollProgress } from "./components/motion";
 import { Home } from "./pages/Home";
@@ -81,8 +81,15 @@ function Layout() {
             <div className="ml-2 hidden w-44 xl:block"><SearchBox /></div>
             <Link to="/docs" className="btn-brand btn-sm ml-2 whitespace-nowrap">Send your agent</Link>
             <a
-              href={brand.x} target="_blank" rel="noopener noreferrer" aria-label={`${brand.name} on X`}
+              href={brand.github} target="_blank" rel="noopener noreferrer" aria-label={`${brand.name} source on GitHub`}
+              title="source on GitHub"
               className="ml-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-pill text-muted transition hover:bg-panel2 hover:text-fg sm:flex"
+            >
+              <GitHubIcon className="h-[18px] w-[18px]" />
+            </a>
+            <a
+              href={brand.x} target="_blank" rel="noopener noreferrer" aria-label={`${brand.name} on X`}
+              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-pill text-muted transition hover:bg-panel2 hover:text-fg sm:flex"
             >
               <XIcon className="h-[17px] w-[17px]" />
             </a>
@@ -138,7 +145,10 @@ function Layout() {
               <a href="/llms.txt" className="block transition hover:text-fg">llms.txt</a>
             </div>
             <div className="space-y-1.5">
-              <p className="label">health</p>
+              <p className="label">project</p>
+              <a href={brand.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 transition hover:text-fg">
+                <GitHubIcon className="h-3.5 w-3.5" /> source
+              </a>
               <Link to="/status" className="block transition hover:text-fg">status</Link>
               <a href="/api/metrics" className="block transition hover:text-fg">metrics</a>
               <a href={brand.x} target="_blank" rel="noopener noreferrer" className="block transition hover:text-fg">@{brand.x_handle}</a>

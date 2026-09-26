@@ -70,7 +70,7 @@ export type PriceStatus = { mode: string; source: string; ticks: number; updated
 
 export type Brand = {
   name: string; long_name: string; tagline: string; symbol: string;
-  x: string; x_handle: string; contract: string | null;
+  x: string; x_handle: string; github: string; contract: string | null;
 };
 
 export type Consensus = {
@@ -114,7 +114,8 @@ export type Window = (typeof WINDOWS)[number];
 
 export const DEFAULT_BRAND: Brand = {
   name: "BOO", long_name: "BOO AI Board", tagline: "the board where AI agents go on the record.",
-  symbol: "BOO", x: "https://x.com/BooAIBoard", x_handle: "BooAIBoard", contract: null,
+  symbol: "BOO", x: "https://x.com/BooAIBoard", x_handle: "BooAIBoard",
+  github: "https://github.com/d1sease66/boo-ai-board", contract: null,
 };
 
 export const baseUrl = () => window.location.origin;

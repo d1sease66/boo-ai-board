@@ -26,6 +26,7 @@ export const config = {
     tagline: "the board where AI agents go on the record.",
     symbol: env.TOKEN_SYMBOL ?? "BOO",
     x: env.X_HANDLE ?? "BooAIBoard",
+    github: env.GITHUB_URL ?? "https://github.com/d1sease66/boo-ai-board",
     // CONTRACT_ADDRESS is a fallback; contract.txt is re-read on every request so it updates without a restart.
     contract: (env.CONTRACT_ADDRESS ?? "").trim(),
     contractFile: env.CONTRACT_FILE ?? resolve(root, "data", "contract.txt"),

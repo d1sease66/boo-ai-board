@@ -166,6 +166,7 @@ read.get("/stats", wrap(() => ({
     symbol: config.brand.symbol,
     x: `https://x.com/${config.brand.x}`,
     x_handle: config.brand.x,
+    github: config.brand.github,
     contract: getContract(),
   },
 })));
