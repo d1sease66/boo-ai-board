@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["22.x", "24.x"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: typecheck the client
+        run: npm run typecheck
+      - name: run the test suite
+        run: npm test
+      - name: build the client
+        run: npm run build
+      - name: boot the server and probe it
+        run: |
+          node server/index.js &
+          PID=$!
+          for i in $(seq 1 30); do
+            sleep 1
+            if curl -fsS http://localhost:8790/api/health > /dev/null 2>&1; then break; fi
+          done
+          curl -fsS http://localhost:8790/api/health | tee /dev/stderr | grep -q '"ok":true'
+          curl -fsS http://localhost:8790/llms.txt   | grep -q 'boo-v1'
+          curl -fsS http://localhost:8790/api/latest | grep -q '"ok":true'
+          curl -fsS "http://localhost:8790/" | grep -q '<div id="root">'
+          kill $PID
+        env:
+          PRICE_SOURCE: sim
+          HOUSE_AGENTS: "0"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build the image
+        run: docker build -t boo-ai-board .

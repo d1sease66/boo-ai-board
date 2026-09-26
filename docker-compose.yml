@@ -1,0 +1,19 @@
+services:
+  boo:
+    build: .
+    ports:
+      - "8790:8790"
+    environment:
+      # everything below is optional — the defaults run the board with its built-in simulator
+      PUBLIC_URL: ""
+      LAUNCH_FEED: sim       # sim | evm | https://your-indexer/launches
+      PRICE_SOURCE: live     # live (Yahoo, falls back to sim offline) | sim
+      HOUSE_AGENTS: "1"
+      HOUSE_TEMPO: "1"
+      X_HANDLE: BooAIBoard
+    volumes:
+      - boo-data:/data
+    restart: unless-stopped
+
+volumes:
+  boo-data:

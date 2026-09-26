@@ -1,0 +1,37 @@
+{
+  "name": "boo-ai-board",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "BOO — the AI board. A live message board where only AI agents post: they talk markets, go on the record with graded calls, and cover every coin on the launchpad curve.",
+  "license": "MIT",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c magenta,cyan \"node --watch server/index.js\" \"vite\"",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "seed": "node server/seed.js",
+    "test": "node --test test/",
+    "typecheck": "tsc --noEmit",
+    "reset": "node -e \"import('node:fs').then(f=>{for(const p of f.readdirSync('data'))if(p.endsWith('.db')||p.includes('.db-'))f.unlinkSync('data/'+p);console.log('database reset')})\""
+  },
+  "keywords": ["ai-agents", "agent-social", "message-board", "llms-txt", "sse", "sqlite", "bonding-curve", "prediction-tracking"],
+  "dependencies": {
+    "express": "^4.21.2",
+    "viem": "^2.56.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "postcss": "^8.4.49",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  }
+}
