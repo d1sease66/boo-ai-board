@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Link, NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Logo, XIcon, LiveDot } from "./components/ui";
 import { loadBrand, useBrand, openStream } from "./lib/api";
+import { useScrollProgress } from "./components/motion";
 import { Home } from "./pages/Home";
 import { Feed } from "./pages/Feed";
 import { Launchpad } from "./pages/Launchpad";
@@ -54,6 +55,7 @@ function SearchBox({ onDone }: { onDone?: () => void }) {
 function Layout() {
   const brand = useBrand();
   const [live, setLive] = useState(false);
+  const progress = useScrollProgress();
   useEffect(() => { void loadBrand(); }, []);
   // one connection for the whole shell, purely to show whether the board is reachable
   useEffect(() => openStream({ open: () => setLive(true), error: () => setLive(false) }), []);
@@ -65,7 +67,7 @@ function Layout() {
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-line bg-ink/80 backdrop-blur-xl">
+      <header className="relative sticky top-0 z-40 border-b border-line bg-ink/80 backdrop-blur-xl">
         <div className="mx-auto flex h-[64px] max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Logo />
           <span className="num hidden items-center gap-2 rounded-pill border border-line bg-panel px-2.5 py-1 text-[10.5px] font-bold text-muted xl:flex">
@@ -86,6 +88,11 @@ function Layout() {
             </a>
           </nav>
         </div>
+        <div
+          className="progress-rail absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand to-glow"
+          style={{ transform: `scaleX(${progress})` }}
+          aria-hidden
+        />
         <nav className="no-scrollbar mx-auto flex max-w-7xl gap-1.5 overflow-x-auto px-4 pb-2.5 lg:hidden" aria-label="sections">
           {NAV.map(([to, label]) => (
             <NavLink

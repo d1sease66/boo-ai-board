@@ -121,5 +121,81 @@ html:not(.eyes-idle) .ghost .drift { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .ghost .drift, .ghost .blink, .ghost .hem, .float-slow, .float-shadow, .orbit, .orbit-rev, .bubble, .reveal,
-  .animate-marquee, .animate-float { animation: none !important; }
+  .animate-marquee, .animate-float, .marquee-track, .aurora::before, .aurora::after, .sweep::after,
+  .ping-once, .halo, .slide-in, .caret { animation: none !important; }
+  .sweep::after { display: none; }
+  .lift:hover { transform: none; }
 }
+
+/* ── motion primitives ────────────────────────────────────────────────────── */
+
+/* A light that follows the pointer across a card. Costs one gradient, no repaint of the content. */
+.spotlight { position: relative; }
+.spotlight::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(18rem 18rem at var(--mx, 50%) var(--my, 50%), rgba(139, 124, 255, .13), transparent 68%);
+  opacity: 0; transition: opacity .35s ease; z-index: 1;
+}
+.spotlight-on::before { opacity: 1; }
+.spotlight > * { position: relative; z-index: 2; }
+
+/* Seamless marquee: the set is rendered twice and shifted by exactly half. */
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+           mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
+.marquee-track { display: flex; width: max-content; animation: marquee-run linear infinite; }
+.marquee-set { display: flex; align-items: center; gap: 12px; padding-right: 12px; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee-run { to { transform: translateX(-50%); } }
+
+/* Slow drifting mesh behind the hero — two blobs on different periods so it never visibly loops. */
+.aurora { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.aurora::before, .aurora::after {
+  content: ""; position: absolute; border-radius: 50%; filter: blur(70px);
+}
+.aurora::before {
+  width: 46rem; height: 34rem; top: -12rem; right: -8rem;
+  background: radial-gradient(circle, rgba(139,124,255,.22), transparent 66%);
+  animation: aurora-a 19s ease-in-out infinite alternate;
+}
+.aurora::after {
+  width: 36rem; height: 28rem; bottom: -10rem; left: -8rem;
+  background: radial-gradient(circle, rgba(67,232,192,.13), transparent 66%);
+  animation: aurora-b 24s ease-in-out infinite alternate;
+}
+@keyframes aurora-a { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-5rem, 3rem, 0) scale(1.14); } }
+@keyframes aurora-b { from { transform: translate3d(0,0,0) scale(1.08); } to { transform: translate3d(4rem, -2.5rem, 0) scale(1); } }
+
+/* A scanline that sweeps a panel once when it enters view. */
+.sweep { position: relative; overflow: hidden; }
+.sweep::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(139,124,255,.10) 50%, transparent 62%);
+  transform: translateX(-120%); animation: sweep-run 5.5s ease-in-out 1.2s infinite;
+}
+@keyframes sweep-run { 0% { transform: translateX(-120%); } 38%, 100% { transform: translateX(120%); } }
+
+/* The reading-progress hairline under the sticky header. */
+.progress-rail { transform-origin: 0 50%; transition: transform .12s linear; }
+
+/* A dot that pings once when something new lands in the feed. */
+.ping-once { animation: ping-once 1.5s ease-out 1; }
+@keyframes ping-once {
+  0% { box-shadow: 0 0 0 0 rgba(67,232,192,.5); }
+  100% { box-shadow: 0 0 0 16px rgba(67,232,192,0); }
+}
+
+/* Cards lift on hover; the whole grid shares one easing so the page feels like one object. */
+.lift { transition: transform .38s cubic-bezier(.2,.8,.2,1), border-color .38s ease, background-color .38s ease; }
+.lift:hover { transform: translateY(-4px); }
+
+/* The hero ghost breathes a glow underneath it. */
+.halo { animation: halo 6.5s ease-in-out infinite; }
+@keyframes halo { 0%,100% { opacity: .30; transform: scale(1); } 50% { opacity: .55; transform: scale(1.1); } }
+
+/* Live ticker rows fade in from the right as they arrive. */
+.slide-in { animation: slide-in .5s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+/* A caret that blinks after the rotating hero word. */
+.caret { display: inline-block; width: 2px; background: #8B7CFF; animation: caret 1.05s steps(1) infinite; }
+@keyframes caret { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
